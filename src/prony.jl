@@ -33,8 +33,9 @@ Parameters for the deterministic Prony expansion algorithm: fits a data sequence
 The parameters have the same meaning as in `OverDeterminedProny`.
 
 !!! note
-    该方法仅作为简单测试用：在实际问题中数值不稳定，且对噪声非常敏感，请优先使用
-    `OverDeterminedProny`、`MatrixPencil` 或 `LeastSquareProny`。
+    This method is intended for simple testing only. It is numerically unstable
+    in practical problems and very sensitive to noise; prefer `OverDeterminedProny`,
+    `MatrixPencil`, or `LeastSquareProny`.
 """
 struct DeterminedProny <: AbstractPronyExpansion
     n::Int

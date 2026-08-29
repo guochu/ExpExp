@@ -1,0 +1,1 @@
+## Approximating any function by the sum of exponential functions

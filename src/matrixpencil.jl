@@ -13,7 +13,7 @@ of the (truncated) Hankel matrix, which makes it considerably more robust to add
 `n` is the maximum number of terms, `stepsize` the sampling step, `tol` the convergence
 error and `verbosity` controls the output verbosity.
 """
-struct MatrixPencilExpansion <: AbstractPronyExpansion
+struct MatrixPencilExpansion <: ExponentialExpansionAlgorithm
     n::Int
     stepsize::Int
     tol::Float64

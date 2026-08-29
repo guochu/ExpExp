@@ -1,0 +1,2 @@
+# local Julia depot used to run under sandboxed environments
+.julia_depot/

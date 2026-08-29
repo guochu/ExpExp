@@ -10,12 +10,12 @@ exponential_expansion_n(f::Vector, p::Int, alg::ExponentialExpansionAlgorithm) =
     throw(ArgumentError("exponential expansion not implemented for $(typeof(alg))"))
 
 """
-    exponential_expansion(f::Vector{<:Number}, alg::AbstractPronyExpansion)
+    exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
 
 Fit the data sequence `f` to a sum of exponentials, returning `(xs, lambdas)`
 such that `f(k) ≈ Σᵢ xs[i] * lambdas[i]^k`.
 """
-function exponential_expansion(f::Vector{<:Number}, alg::AbstractPronyExpansion)
+function exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
     (length(f) > 1) || throw(ArgumentError("length of data should be larger than 1"))
     xs, lambdas = _exponential_expansion_impl(f, alg)
     if alg.stepsize != 1
@@ -37,7 +37,7 @@ function expansion_changestepsize!(xs::Vector, lambdas::Vector, stepsize::Int)
     return xs, lambdas
 end
 
-function _exponential_expansion_impl(f::Vector{<:Number}, alg::AbstractPronyExpansion)
+function _exponential_expansion_impl(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
     L = length(f)
     tol = alg.tol * norm(f)
     verbosity = alg.verbosity

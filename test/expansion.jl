@@ -5,7 +5,7 @@
 @testset "exponential_expansion" begin
     atol = 1.0e-10
     for ydata in real_exp_data()
-        for alg in (PronyExpansion(n=20, tol=atol), DeterminedPronyExpansion(n=20, tol=atol))
+        for alg in (OverDeterminedProny(n=20, tol=atol), DeterminedProny(n=20, tol=atol))
             xs, lambdas = exponential_expansion(ydata, alg)
             @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
         end
@@ -15,9 +15,9 @@ end
 @testset "exponential_expansion: function input" begin
     ydata = [0.5^k + 2 * 0.7^k for k in 1:20]
     atol = 1.0e-8
-    xs, lambdas = exponential_expansion(k -> 0.5^k + 2 * 0.7^k, 20, PronyExpansion(n=20, tol=atol))
+    xs, lambdas = exponential_expansion(k -> 0.5^k + 2 * 0.7^k, 20, OverDeterminedProny(n=20, tol=atol))
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
-    xs, lambdas = exponential_expansion(k -> 0.5^k + 2 * 0.7^k, 20, alg=PronyExpansion(n=20, tol=atol))
+    xs, lambdas = exponential_expansion(k -> 0.5^k + 2 * 0.7^k, 20, alg=OverDeterminedProny(n=20, tol=atol))
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
@@ -25,8 +25,7 @@ end
     ydata = [0.5^k + 2 * 0.7^k for k in 1:20]
     stepsize = 3
     atol = 1.0e-8
-    xs, lambdas = exponential_expansion(ydata[1:stepsize:end],
-        PronyExpansion(n=20, stepsize=stepsize, tol=atol))
+    xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol); stepsize=stepsize)
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
@@ -39,9 +38,9 @@ end
 @testset "complex data: common interface" begin
     atol = 1.0e-8
     ydata = complex_exp_data()
-    for alg in (PronyExpansion(n=10, tol=atol),
-                DeterminedPronyExpansion(n=10, tol=atol),
-                MatrixPencilExpansion(n=10, tol=atol))
+    for alg in (OverDeterminedProny(n=10, tol=atol),
+                DeterminedProny(n=10, tol=atol),
+                MatrixPencil(n=10, tol=atol))
         xs, lambdas = exponential_expansion(ydata, alg)
         @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
     end

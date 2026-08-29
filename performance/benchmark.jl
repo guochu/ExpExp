@@ -1,7 +1,7 @@
 # ==========================================================================
 # Precision & efficiency analysis of the sum-of-exponentials fitting algorithms
 #
-#   Compare:  prony (deterministic), lsq_prony (least-squares),
+#   Compare:  determined_prony (deterministic), overdetermined_prony (least-squares),
 #             matrix_pencil (Hua–Sarkar, SVD-based)
 #
 #   Run with:
@@ -62,8 +62,8 @@ end
 
 # algorithm -> (fit function, name)
 const ALGS = [
-    (name="prony (deterministic)", fit=(y, p) -> prony(y, p)),
-    (name="lsq_prony (least-squares)", fit=(y, p) -> lsq_prony(y, p)),
+    (name="determined_prony (deterministic)", fit=(y, p) -> determined_prony(y, p)),
+    (name="overdetermined_prony (least-squares)", fit=(y, p) -> overdetermined_prony(y, p)),
     (name="matrix_pencil (Hua-Sarkar)", fit=(y, p) -> matrix_pencil(y, p)),
 ]
 
@@ -73,7 +73,7 @@ println("    signal: p=3 damped 'almost-real' bases, N=200")
 println("="^78)
 
 p, N = 3, 200
-@printf "%-28s %12s %12s %12s\n" "noise \\ alg" "prony" "lsq_prony" "m_pencil"
+@printf "%-28s %12s %12s %12s\n" "noise \\ alg" "determined_prony" "overdetermined_prony" "m_pencil"
 for snr in (0.0, 1e-6, 1e-4, 1e-2)
     y = make_data(p, N; noise_std=snr)
     @printf "%.0e               " snr
@@ -99,7 +99,7 @@ println("="^78)
 println(" 3) EFFICIENCY: best-of-5 wall time [ms] vs. data length N (p=4, clean)")
 println("="^78)
 p = 4
-@printf "%-10s %14s %14s %14s\n" "N" "prony" "lsq_prony" "m_pencil"
+@printf "%-10s %14s %14s %14s\n" "N" "determined_prony" "overdetermined_prony" "m_pencil"
 for N in (100, 500, 1000, 2000)
     y = make_data(p, N)
     row = Float64[]

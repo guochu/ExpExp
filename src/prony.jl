@@ -3,52 +3,51 @@
 # =====================================================================
 
 """
-    PronyExpansion(n=10, stepsize=1, tol=1e-8, verbosity=1)
-    PronyExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    OverDeterminedProny(n=10, tol=1e-8, verbosity=1)
+    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1)
 
 Parameters for the Prony expansion algorithm: fits a data sequence to a sum of exponentials using the least-squares Prony method.
-`n` is the maximum number of terms, `stepsize` the sampling step, `tol` the convergence error, and `verbosity` controls the output verbosity.
+`n` is the maximum number of terms, `tol` the convergence error, and `verbosity` controls the output verbosity.
+The sampling step is supplied via the `stepsize` keyword of [`exponential_expansion`](@ref) (default 1).
 """
-struct PronyExpansion <: AbstractPronyExpansion
+struct OverDeterminedProny <: AbstractPronyExpansion
     n::Int
-    stepsize::Int
     tol::Float64
     verbosity::Int
 end
 """
-    PronyExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1)
 
-Keyword constructor for `PronyExpansion`.
+Keyword constructor for `OverDeterminedProny`.
 """
-PronyExpansion(; n::Int=10, stepsize::Int=1, tol::Real = 1.0e-8, verbosity::Int=1) = PronyExpansion(n, stepsize, convert(Float64, tol), verbosity)
+OverDeterminedProny(; n::Int=10, tol::Real = 1.0e-8, verbosity::Int=1) = OverDeterminedProny(n, convert(Float64, tol), verbosity)
 
 """
-    DeterminedPronyExpansion(n=10, stepsize=1, tol=1e-8, verbosity=1)
-    DeterminedPronyExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    DeterminedProny(n=10, tol=1e-8, verbosity=1)
+    DeterminedProny(; n=10, tol=1e-8, verbosity=1)
 
 Parameters for the deterministic Prony expansion algorithm: fits a data sequence to a sum of exponentials using the exact Hankel method (rather than least squares).
-The parameters have the same meaning as in `PronyExpansion`.
+The parameters have the same meaning as in `OverDeterminedProny`.
 """
-struct DeterminedPronyExpansion <: AbstractPronyExpansion
+struct DeterminedProny <: AbstractPronyExpansion
     n::Int
-    stepsize::Int
     tol::Float64
     verbosity::Int
 end
 """
-    DeterminedPronyExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    DeterminedProny(; n=10, tol=1e-8, verbosity=1)
 
-Keyword constructor for `DeterminedPronyExpansion`.
+Keyword constructor for `DeterminedProny`.
 """
-DeterminedPronyExpansion(; n::Int=10, stepsize::Int=1, tol::Real = 1.0e-8, verbosity::Int=1) = DeterminedPronyExpansion(n, stepsize, convert(Float64, tol), verbosity)
+DeterminedProny(; n::Int=10, tol::Real = 1.0e-8, verbosity::Int=1) = DeterminedProny(n, convert(Float64, tol), verbosity)
 
 
 """
-    prony(x::Vector, p::Int)
+    determined_prony(x::Vector, p::Int)
 
 Exact Prony fit of `x` to `p` exponentials using the (deterministic) Hankel method. Returns `(α, z)` with `x(k) ≈ Σᵢ αᵢ zᵢ^k`.
 """
-function prony(x::Vector, p::Int)
+function determined_prony(x::Vector, p::Int)
     n = length(x)
     @assert p <= n÷2 "p can not exceed length(x)/2"
 
@@ -72,12 +71,12 @@ function prony(x::Vector, p::Int)
 end
 
 """
-    lsq_prony(x::Vector, p::Int)
+    overdetermined_prony(x::Vector, p::Int)
 
 Least-squares Prony fit of `x` to `p` exponentials. Returns `(α, z)` with `x(k) ≈ Σᵢ αᵢ zᵢ^k`.
-More robust than `prony` when the data is noisy or the number of terms is not exactly `p`.
+More robust than `determined_prony` when the data is noisy or the number of terms is not exactly `p`.
 """
-function lsq_prony(x::Vector, p::Int)
+function overdetermined_prony(x::Vector, p::Int)
     n = length(x)
     @assert p <= n÷2 "p can not exceed length(x)/2"
 
@@ -100,5 +99,5 @@ function lsq_prony(x::Vector, p::Int)
     α, z
 end
 
-exponential_expansion_n(f::Vector, p::Int, alg::PronyExpansion) = lsq_prony(f, p)
-exponential_expansion_n(f::Vector, p::Int, alg::DeterminedPronyExpansion) = prony(f, p)
+exponential_expansion_n(f::Vector, p::Int, alg::OverDeterminedProny) = overdetermined_prony(f, p)
+exponential_expansion_n(f::Vector, p::Int, alg::DeterminedProny) = determined_prony(f, p)

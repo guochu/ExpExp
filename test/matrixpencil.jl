@@ -2,10 +2,10 @@
 # Matrix Pencil algorithm tests: real and complex data, cross-validation
 # ==========================================================================
 
-@testset "MatrixPencilExpansion" begin
+@testset "MatrixPencil" begin
     atol = 1.0e-10
     for ydata in real_exp_data()
-        xs, lambdas = exponential_expansion(ydata, MatrixPencilExpansion(n=20, tol=atol, verbosity=0))
+        xs, lambdas = exponential_expansion(ydata, MatrixPencil(n=20, tol=atol, verbosity=0))
         @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
     end
 end
@@ -22,8 +22,8 @@ end
     atol = 1.0e-10
 
     # both algorithms recover the same bases on exact exponential data
-    xsm, lamm = exponential_expansion(ydata, MatrixPencilExpansion(n=20, tol=atol, verbosity=0))
-    xsp, lamp = exponential_expansion(ydata, PronyExpansion(n=20, tol=atol, verbosity=0))
+    xsm, lamm = exponential_expansion(ydata, MatrixPencil(n=20, tol=atol, verbosity=0))
+    xsp, lamp = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol, verbosity=0))
     @test sort(real(lamm)) ≈ sort(real(lamp)) rtol = 1.0e-6
     @test isapprox(sort(real(lamm)), [0.5, 0.7]; rtol=1e-6)
 

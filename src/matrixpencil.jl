@@ -3,29 +3,29 @@
 # =====================================================================
 
 """
-    MatrixPencilExpansion(n=10, stepsize=1, tol=1e-8, verbosity=1)
-    MatrixPencilExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    MatrixPencil(n=10, tol=1e-8, verbosity=1)
+    MatrixPencil(; n=10, tol=1e-8, verbosity=1)
 
 Parameters for the Matrix Pencil expansion algorithm: fits a data sequence to a sum of
 exponentials using the matrix pencil method (Hua & Sarkar). Unlike the polynomial-type
 (Prony) methods, it extracts the bases directly from the generalized eigenvalue problem
 of the (truncated) Hankel matrix, which makes it considerably more robust to additive noise.
-`n` is the maximum number of terms, `stepsize` the sampling step, `tol` the convergence
-error and `verbosity` controls the output verbosity.
+`n` is the maximum number of terms, `tol` the convergence error and `verbosity` controls
+the output verbosity. The sampling step is supplied via the `stepsize` keyword of
+[`exponential_expansion`](@ref) (default 1).
 """
-struct MatrixPencilExpansion <: ExponentialExpansionAlgorithm
+struct MatrixPencil <: ExponentialExpansionAlgorithm
     n::Int
-    stepsize::Int
     tol::Float64
     verbosity::Int
 end
 """
-    MatrixPencilExpansion(; n=10, stepsize=1, tol=1e-8, verbosity=1)
+    MatrixPencil(; n=10, tol=1e-8, verbosity=1)
 
-Keyword constructor for `MatrixPencilExpansion`.
+Keyword constructor for `MatrixPencil`.
 """
-MatrixPencilExpansion(; n::Int=10, stepsize::Int=1, tol::Real=1.0e-8, verbosity::Int=1) =
-    MatrixPencilExpansion(n, stepsize, convert(Float64, tol), verbosity)
+MatrixPencil(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1) =
+    MatrixPencil(n, convert(Float64, tol), verbosity)
 
 """
     matrix_pencil(s::Vector{<:Number}, p::Int)
@@ -75,4 +75,4 @@ function matrix_pencil(s::Vector{<:Number}, p::Int)
     return xs, lambdas
 end
 
-exponential_expansion_n(f::Vector, p::Int, alg::MatrixPencilExpansion) = matrix_pencil(f, p)
+exponential_expansion_n(f::Vector, p::Int, alg::MatrixPencil) = matrix_pencil(f, p)

@@ -18,5 +18,5 @@ real_exp_data() = [
     include("expansion.jl")
     include("prony.jl")
     include("matrixpencil.jl")
-    include("gradientdescent.jl")
+    include("lsqexpansion.jl")
 end

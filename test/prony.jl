@@ -1,5 +1,5 @@
 # ==========================================================================
-# Prony algorithm tests: prony / lsq_prony (real and complex data)
+# Prony algorithm tests: determined_prony / overdetermined_prony (real and complex data)
 # ==========================================================================
 
 @testset "Prony: deterministic on real data" begin
@@ -10,7 +10,7 @@
         ([-2 * 0.3^k + 0.9^k - 1.5 * 0.5^k for k in 1:20], 3),
     ]
     for (ydata, p) in cases
-        α, z = prony(ydata, p)
+        α, z = determined_prony(ydata, p)
         @test expansion_error(ydata, α, z) / norm(ydata) < atol
     end
 end
@@ -22,7 +22,7 @@ end
         ([-2 * 0.3^k + 0.9^k - 1.5 * 0.5^k for k in 1:20], 3),
     ]
     for (ydata, p) in cases
-        α, z = lsq_prony(ydata, p)
+        α, z = overdetermined_prony(ydata, p)
         @test expansion_error(ydata, α, z) / norm(ydata) < atol
     end
 end
@@ -30,8 +30,8 @@ end
 @testset "Prony: complex data" begin
     ydata = complex_exp_data()
     atol = 1.0e-8
-    α, z = prony(ydata, 2)
+    α, z = determined_prony(ydata, 2)
     @test expansion_error(ydata, α, z) / norm(ydata) < atol
-    α, z = lsq_prony(ydata, 2)
+    α, z = overdetermined_prony(ydata, 2)
     @test expansion_error(ydata, α, z) / norm(ydata) < atol
 end

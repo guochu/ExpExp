@@ -10,7 +10,7 @@
         ([-2 * 0.3^k + 0.9^k - 1.5 * 0.5^k for k in 1:20], 3),
     ]
     for (ydata, p) in cases
-        α, z = determined_prony(ydata, p)
+        α, z = ExpExp.determined_prony(ydata, p)
         @test expansion_error(ydata, α, z) / norm(ydata) < atol
     end
 end
@@ -22,7 +22,7 @@ end
         ([-2 * 0.3^k + 0.9^k - 1.5 * 0.5^k for k in 1:20], 3),
     ]
     for (ydata, p) in cases
-        α, z = overdetermined_prony(ydata, p)
+        α, z = ExpExp.overdetermined_prony(ydata, p)
         @test expansion_error(ydata, α, z) / norm(ydata) < atol
     end
 end
@@ -30,8 +30,8 @@ end
 @testset "Prony: complex data" begin
     ydata = complex_exp_data()
     atol = 1.0e-8
-    α, z = determined_prony(ydata, 2)
+    α, z = ExpExp.determined_prony(ydata, 2)
     @test expansion_error(ydata, α, z) / norm(ydata) < atol
-    α, z = overdetermined_prony(ydata, 2)
+    α, z = ExpExp.overdetermined_prony(ydata, 2)
     @test expansion_error(ydata, α, z) / norm(ydata) < atol
 end

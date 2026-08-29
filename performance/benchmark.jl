@@ -60,11 +60,17 @@ function make_data(p::Int, N::Int; noise_std::Float64=0.0,
     y
 end
 
-# algorithm -> (fit function, name)
+# algorithm -> (table label, display name, fit function)
+# leastsquare_prony upcasts real data to ComplexF64 internally.
 const ALGS = [
-    (name="determined_prony (deterministic)", fit=(y, p) -> determined_prony(y, p)),
-    (name="overdetermined_prony (least-squares)", fit=(y, p) -> overdetermined_prony(y, p)),
-    (name="matrix_pencil (Hua-Sarkar)", fit=(y, p) -> matrix_pencil(y, p)),
+    (label="determined_prony", name="determined_prony (deterministic)",
+     fit=(y, p) -> ExpExp.determined_prony(y, p)),
+    (label="overdetermined_prony", name="overdetermined_prony (least-squares)",
+     fit=(y, p) -> ExpExp.overdetermined_prony(y, p)),
+    (label="m_pencil", name="matrix_pencil (Hua-Sarkar)",
+     fit=(y, p) -> ExpExp.matrix_pencil(y, p)),
+    (label="lsq_prony", name="leastsquare_prony (complex + LM refine)",
+     fit=(y, p) -> leastsquare_prony(y, p)),
 ]
 
 println("="^78)
@@ -73,13 +79,17 @@ println("    signal: p=3 damped 'almost-real' bases, N=200")
 println("="^78)
 
 p, N = 3, 200
-@printf "%-28s %12s %12s %12s\n" "noise \\ alg" "determined_prony" "overdetermined_prony" "m_pencil"
+@printf "%-14s" "noise \\ alg"
+for alg in ALGS
+    @printf " %14s" alg.label
+end
+println()
 for snr in (0.0, 1e-6, 1e-4, 1e-2)
     y = make_data(p, N; noise_std=snr)
-    @printf "%.0e               " snr
+    @printf "%-14.0e" snr
     for alg in ALGS
         xs, zs = alg.fit(y, p)
-        @printf " %10.2e" rel_err(y, xs, zs)
+        @printf " %13.2e" rel_err(y, xs, zs)
     end
     println()
 end
@@ -99,14 +109,22 @@ println("="^78)
 println(" 3) EFFICIENCY: best-of-5 wall time [ms] vs. data length N (p=4, clean)")
 println("="^78)
 p = 4
-@printf "%-10s %14s %14s %14s\n" "N" "determined_prony" "overdetermined_prony" "m_pencil"
+@printf "%-10s" "N"
+for alg in ALGS
+    @printf " %14s" alg.label
+end
+println()
 for N in (100, 500, 1000, 2000)
     y = make_data(p, N)
     row = Float64[]
     for alg in ALGS
         push!(row, 1e3 * best_time(5, () -> alg.fit(y, p)))
     end
-    @printf "%-10d %11.3f ms %11.3f ms %11.3f ms\n" N row[1] row[2] row[3]
+    @printf "%-10d" N
+    for t in row
+        @printf " %11.3f ms" t
+    end
+    println()
 end
 
 println()

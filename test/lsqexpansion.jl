@@ -30,8 +30,12 @@ end
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
-@testset "LeastSquareProny: rejects real data" begin
-    @test_throws ErrorException exponential_expansion(real_exp_data()[1], LeastSquareProny())
+@testset "LeastSquareProny: real data" begin
+    atol = 1.0e-8
+    for ydata in real_exp_data()
+        xs, lambdas = exponential_expansion(ydata, LeastSquareProny(n=10, tol=atol))
+        @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
+    end
 end
 
 @testset "lsq_expansion_n: direct refinement" begin

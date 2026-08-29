@@ -13,7 +13,7 @@ end
 @testset "MatrixPencil: complex data" begin
     atol = 1.0e-8
     ydata = complex_exp_data()
-    xs, lambdas = matrix_pencil(ydata, 2)
+    xs, lambdas = ExpExp.matrix_pencil(ydata, 2)
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
@@ -30,7 +30,7 @@ end
     # noise robustness: matrix pencil stays accurate, Prony does not
     Random.seed!(7)
     ynoisy = ydata .+ 1.0e-4 .* randn(20)
-    xn, lamn = matrix_pencil(ynoisy, 2)
+    xn, lamn = ExpExp.matrix_pencil(ynoisy, 2)
     @test expansion_error(ynoisy, xn, lamn) / norm(ynoisy) < 1.0e-2  # fits the noisy data well
     @test maximum(abs.(sort(real(lamn)) .- [0.5, 0.7])) < 1.0e-2     # bases stay stable
 end

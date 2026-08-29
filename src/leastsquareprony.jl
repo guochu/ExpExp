@@ -2,7 +2,7 @@
 # LeastSquareProny: overdetermined_prony initial guess + gradient-descent refinement
 # =====================================================================
 #
-# Fits a (complex-valued) sequence to a sum of exponentials by
+# Fits a (real or complex) sequence to a sum of exponentials by
 #   1. using overdetermined_prony to obtain an initial guess;
 #   2. re-parameterizing each complex amplitude/base by its (norm, phase)
 #      so the unknowns are real, then refining them with a damped
@@ -36,16 +36,26 @@ Keyword constructor for `LeastSquareProny`.
 LeastSquareProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1) =
     LeastSquareProny(n, convert(Float64, tol), verbosity)
 
-# ----------------------------------------------------------------------
-# fixed-stepsize n-term fit (called by the generic iterative expansion loop)
-# ----------------------------------------------------------------------
-exponential_expansion_n(f::Vector{<:Real}, p::Int, alg::LeastSquareProny) =
-    error("LeastSquareProny only supports Complex data currently")
+"""
+    leastsquare_prony(x::Vector{<:Number}, p::Int)
 
-function exponential_expansion_n(f::Vector{<:Complex}, p::Int, alg::LeastSquareProny)
+Least-squares Prony fit of `x` to `p` exponentials, refined by damped
+Gauss-Newton (Levenberg-Marquardt) over the `(norm, phase)` parameterization.
+Real data is upcast to `ComplexF64` internally. Returns `(α, z)` with
+`x(k) ≈ Σᵢ αᵢ zᵢ^k`.
+"""
+function leastsquare_prony(x::Vector{<:Number}, p::Int)
+    f = ComplexF64.(x)
     alps, lams = overdetermined_prony(f, p)
     alps, lams, _ = lsq_expansion_n(f, alps, lams)
     return alps, lams
+end
+
+# ----------------------------------------------------------------------
+# fixed-stepsize n-term fit (called by the generic iterative expansion loop)
+# ----------------------------------------------------------------------
+function exponential_expansion_n(f::Vector{<:Number}, p::Int, alg::LeastSquareProny)
+    return leastsquare_prony(f, p)
 end
 
 # ----------------------------------------------------------------------

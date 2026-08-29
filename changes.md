@@ -9,7 +9,7 @@
 - `src/expansion.jl` —— 公共抽象类型与统一接口（`exponential_expansion` / `exponential_expansion_opt` / `expansion_error`），含 `first_period`、`cut` 工具。
 - `src/prony.jl` —— Prony 族底层求解 `determined_prony`、`overdetermined_prony`。
 - `src/matrixpencil.jl` —— 矩阵束法 `matrix_pencil`。
-- `src/lsgexpansion.jl` —— 最小二乘 + 梯度精化 `LeastSquareProny`（仅复数）。
+- `src/leastsquareprony.jl` —— 最小二乘 + 梯度精化 `LeastSquareProny`（仅复数）。
 
 ## 类型改名
 

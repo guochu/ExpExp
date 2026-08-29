@@ -31,6 +31,10 @@ OverDeterminedProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1, stepsize::U
 
 Parameters for the deterministic Prony expansion algorithm: fits a data sequence to a sum of exponentials using the exact Hankel method (rather than least squares).
 The parameters have the same meaning as in `OverDeterminedProny`.
+
+!!! note
+    该方法仅作为简单测试用：在实际问题中数值不稳定，且对噪声非常敏感，请优先使用
+    `OverDeterminedProny`、`MatrixPencil` 或 `LeastSquareProny`。
 """
 struct DeterminedProny <: AbstractPronyExpansion
     n::Int

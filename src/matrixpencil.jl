@@ -3,29 +3,31 @@
 # =====================================================================
 
 """
-    MatrixPencil(n=10, tol=1e-8, verbosity=1)
-    MatrixPencil(; n=10, tol=1e-8, verbosity=1)
+    MatrixPencil(n=10, tol=1e-8, verbosity=1, stepsize=1)
+    MatrixPencil(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Parameters for the Matrix Pencil expansion algorithm: fits a data sequence to a sum of
 exponentials using the matrix pencil method (Hua & Sarkar). Unlike the polynomial-type
 (Prony) methods, it extracts the bases directly from the generalized eigenvalue problem
 of the (truncated) Hankel matrix, which makes it considerably more robust to additive noise.
 `n` is the maximum number of terms, `tol` the convergence error and `verbosity` controls
-the output verbosity. The sampling step is supplied via the `stepsize` keyword of
-[`exponential_expansion`](@ref) (default 1).
+the output verbosity. `stepsize` (default 1) is the uniform sampling step used by
+[`exponential_expansion`](@ref); pass `stepsize=nothing` to let the algorithm select the
+step automatically.
 """
 struct MatrixPencil <: ExponentialExpansionAlgorithm
     n::Int
     tol::Float64
     verbosity::Int
+    stepsize::Union{Int, Nothing}
 end
 """
-    MatrixPencil(; n=10, tol=1e-8, verbosity=1)
+    MatrixPencil(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Keyword constructor for `MatrixPencil`.
 """
-MatrixPencil(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1) =
-    MatrixPencil(n, convert(Float64, tol), verbosity)
+MatrixPencil(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1, stepsize::Union{Int,Nothing}=1) =
+    MatrixPencil(n, convert(Float64, tol), verbosity, stepsize)
 
 """
     matrix_pencil(s::Vector{<:Number}, p::Int)

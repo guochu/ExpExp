@@ -3,28 +3,31 @@
 # =====================================================================
 
 """
-    OverDeterminedProny(n=10, tol=1e-8, verbosity=1)
-    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1)
+    OverDeterminedProny(n=10, tol=1e-8, verbosity=1, stepsize=1)
+    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Parameters for the Prony expansion algorithm: fits a data sequence to a sum of exponentials using the least-squares Prony method.
 `n` is the maximum number of terms, `tol` the convergence error, and `verbosity` controls the output verbosity.
-The sampling step is supplied via the `stepsize` keyword of [`exponential_expansion`](@ref) (default 1).
+`stepsize` (default 1) is the uniform sampling step used by [`exponential_expansion`](@ref); pass `stepsize=nothing`
+to let the algorithm select the step automatically.
 """
 struct OverDeterminedProny <: AbstractPronyExpansion
     n::Int
     tol::Float64
     verbosity::Int
+    stepsize::Union{Int, Nothing}
 end
 """
-    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1)
+    OverDeterminedProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Keyword constructor for `OverDeterminedProny`.
 """
-OverDeterminedProny(; n::Int=10, tol::Real = 1.0e-8, verbosity::Int=1) = OverDeterminedProny(n, convert(Float64, tol), verbosity)
+OverDeterminedProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1, stepsize::Union{Int,Nothing}=1) =
+    OverDeterminedProny(n, convert(Float64, tol), verbosity, stepsize)
 
 """
-    DeterminedProny(n=10, tol=1e-8, verbosity=1)
-    DeterminedProny(; n=10, tol=1e-8, verbosity=1)
+    DeterminedProny(n=10, tol=1e-8, verbosity=1, stepsize=1)
+    DeterminedProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Parameters for the deterministic Prony expansion algorithm: fits a data sequence to a sum of exponentials using the exact Hankel method (rather than least squares).
 The parameters have the same meaning as in `OverDeterminedProny`.
@@ -33,13 +36,15 @@ struct DeterminedProny <: AbstractPronyExpansion
     n::Int
     tol::Float64
     verbosity::Int
+    stepsize::Union{Int, Nothing}
 end
 """
-    DeterminedProny(; n=10, tol=1e-8, verbosity=1)
+    DeterminedProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Keyword constructor for `DeterminedProny`.
 """
-DeterminedProny(; n::Int=10, tol::Real = 1.0e-8, verbosity::Int=1) = DeterminedProny(n, convert(Float64, tol), verbosity)
+DeterminedProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1, stepsize::Union{Int,Nothing}=1) =
+    DeterminedProny(n, convert(Float64, tol), verbosity, stepsize)
 
 
 """

@@ -24,7 +24,7 @@ ExponentialExpansionAlgorithm
 └── LeastSquareProny                   OverDeterminedProny 初猜 + 梯度下降精化
 ```
 
-所有算法的采样步长统一通过最外层接口的关键字 `stepsize`（默认 1）传入；需要自动选取最优步长时使用 [`exponential_expansion_opt`](@ref)。
+所有算法的采样步长由算法类型自身的 `stepsize` 字段携带（默认 `1`）；设为 `nothing` 时自动选取最优步长。
 
 | 类型 | 原理 | 数据要求 |
 |---|---|---|
@@ -33,7 +33,7 @@ ExponentialExpansionAlgorithm
 | `MatrixPencil` | 矩阵束法（Hankel 矩阵 SVD + 广义特征值） | 实数 / 复数 |
 | `LeastSquareProny` | OverDeterminedProny 初猜，再以 `(模,相位)` 实参数化做梯度下降（`lsq_expansion_n`） | 实数 / 复数 |
 
-统一的公开入口为 `exponential_expansion` / `exponential_expansion_opt`，请勿直接调用底层求解函数。
+统一的公开入口为 `exponential_expansion`，请勿直接调用底层求解函数。
 
 ---
 
@@ -49,9 +49,9 @@ f = [0.5^k + 2 * 0.7^k for k in 1:20]
 xs, lambdas = exponential_expansion(f, OverDeterminedProny(n=20))
 # 或其它算法
 xs, lambdas = exponential_expansion(f, MatrixPencil(n=20))
-xs, lambdas = exponential_expansion(f, LeastSquareProny(n=20, tol=1e-8))   # 复数数据
+xs, lambdas = exponential_expansion(f, LeastSquareProny(n=20, tol=1e-8))
 # 自动选择最优采样步长
-xs, lambdas = exponential_expansion_opt(f, OverDeterminedProny(n=20))
+xs, lambdas = exponential_expansion(f, OverDeterminedProny(n=20, stepsize=nothing))
 
 # 重建误差（相对 L2 范数）
 rel_err = expansion_error(f, xs, lambdas) / norm(f)
@@ -68,14 +68,14 @@ xs, lambdas = exponential_expansion(k -> 0.5^k + 2 * 0.7^k, 20, alg=OverDetermin
 
 ### 采样步长 `stepsize`
 
-默认（`stepsize=1`）时算法直接对原始序列 `f(1), f(2), …, f(N)` 拟合
-`f(k) ≈ Σᵢ αᵢ λᵢᵏ`。传入整数 `stepsize=s>1` 时，先按均匀间隔抽样
-`g(n) = f(1 + (n-1)s)`，在降采样序列 `g` 上完成拟合后，再把系数与基底换算回原始采样，
-因此**返回值始终满足** `f(k) ≈ Σᵢ αᵢ λᵢᵏ`（在原始网格上）：
+采样步长是算法类型的字段 `alg.stepsize`，默认 `1`，即直接对原始序列
+`f(1), f(2), …, f(N)` 拟合 `f(k) ≈ Σᵢ αᵢ λᵢᵏ`。设为整数 `stepsize=s>1` 时，
+先按均匀间隔抽样 `g(n) = f(1 + (n-1)s)`，在降采样序列 `g` 上完成拟合后，再把系数
+与基底换算回原始采样，因此**返回值始终满足** `f(k) ≈ Σᵢ αᵢ λᵢᵏ`（在原始网格上）：
 
 ```julia
 # 用步长 3 拟合：内部只用到 f[1], f[4], f[7], ...
-xs, lambdas = exponential_expansion(f, OverDeterminedProny(); stepsize=3)
+xs, lambdas = exponential_expansion(f, OverDeterminedProny(stepsize=3))
 ```
 
 步长的作用与取舍：
@@ -83,8 +83,13 @@ xs, lambdas = exponential_expansion(f, OverDeterminedProny(); stepsize=3)
 - 当数据相对真实指数模式**过密**、或各基底彼此接近导致拟合矩阵条件数差时，增大 `stepsize`
   能改善数值稳定性；
 - 但步长过大只利用少量采样点，可能丢失高频成分；
-- 不确定选多大时，用 `exponential_expansion_opt`：它会基于数据首周期自动尝试多个候选步长，
-  返回重建误差最小者。
+- 不确定选多大时，把 `stepsize` 设为 `nothing`：算法会基于数据首周期自动尝试多个候选步长，
+  返回重建误差最小者（等价于旧接口 `exponential_expansion_opt`）。
+
+```julia
+# 自动选择最优采样步长
+xs, lambdas = exponential_expansion(f, OverDeterminedProny(stepsize=nothing))
+```
 
 ---
 

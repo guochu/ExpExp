@@ -10,17 +10,29 @@ exponential_expansion_n(f::Vector, p::Int, alg::ExponentialExpansionAlgorithm) =
     throw(ArgumentError("exponential expansion not implemented for $(typeof(alg))"))
 
 """
-    exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm; stepsize=1)
+    exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
 
 Fit the data sequence `f` to a sum of exponentials, returning `(xs, lambdas)`
 such that `f(k) ≈ Σᵢ xs[i] * lambdas[i]^k`.
 
-`stepsize` (default 1) is the uniform sampling step used for the fit; the returned
-coefficients/bases are rescaled back to the original sampling of `f`.
+The sampling step is carried by the `alg.stepsize` field:
+- an `Int` `s` (default 1): fit on the uniform subsample `f[1:s:end]` and rescale
+  the coefficients/bases back to the original sampling of `f`;
+- `nothing`: the step is chosen automatically — a cascade of candidate steps derived
+  from the first period of `f` is tried, the fit with the smallest reconstruction
+  error is kept, then pruned by [`cut`](@ref).
 """
-function exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm;
-                               stepsize::Int=1)
+function exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
     (length(f) > 1) || throw(ArgumentError("length of data should be larger than 1"))
+    if alg.stepsize isa Nothing
+        return _exponential_expansion_opt(f, alg)
+    end
+    return _exponential_expansion_step(f, alg, alg.stepsize)
+end
+
+# fixed-step fit with the explicit integer sampling step
+function _exponential_expansion_step(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm,
+                                     stepsize::Int)
     if stepsize == 1
         return _exponential_expansion_impl(f, alg)
     end
@@ -31,19 +43,11 @@ function exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlg
     return xs, lambdas
 end
 
-"""
-    exponential_expansion_opt(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
-
-Like [`exponential_expansion`](@ref), but the uniform sampling step is chosen
-automatically: a cascade of candidate steps derived from the first period of `f` is
-tried and the fit with the smallest reconstruction error is kept, then pruned by
-[`cut`](@ref).
-"""
-function exponential_expansion_opt(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
-    (length(f) > 1) || throw(ArgumentError("length of data should be larger than 1"))
+# automatic step selection: try candidate steps, keep the best fit, then prune
+function _exponential_expansion_opt(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
     best = (Inf, nothing, nothing)          # (err, xs, lambdas)
     for step in _candidate_steps(f)
-        xs, lambdas = exponential_expansion(f, alg; stepsize=step)
+        xs, lambdas = _exponential_expansion_step(f, alg, step)
         err = expansion_error(f, xs, lambdas)
         if err < best[1]
             best = (err, xs, lambdas)
@@ -120,7 +124,7 @@ Version in which the coefficients and bases are passed separately, equivalent to
 expansion_error(f::Vector{<:Number}, coeffs::Vector{<:Number}, alphas::Vector{<:Number}) = expansion_error(f, vcat(coeffs, alphas))
 
 # ----------------------------------------------------------------------
-# helpers for automatic step selection ([`exponential_expansion_opt`](@ref))
+# helpers for automatic step selection (triggered by `alg.stepsize === nothing`)
 # ----------------------------------------------------------------------
 function first_period(x::Vector{<:Real})
     idx = findfirst(i -> !((x[i] > x[i-1]) ⊻ (x[i] > x[i+1])), 2:(length(x) - 1))
@@ -156,28 +160,21 @@ function cut(f::Vector, as::Vector, bs::Vector, atol::Real)
 end
 
 """
-    exponential_expansion(f::Vector{<:Number}; alg=OverDeterminedProny(), stepsize=1)
-    exponential_expansion(f, L::Int; alg=OverDeterminedProny(), stepsize=1)
+    exponential_expansion(f::Vector{<:Number}; alg=OverDeterminedProny())
+    exponential_expansion(f, L::Int; alg=OverDeterminedProny())
 
 Return coefficients `αᵢ` and bases `βᵢ` such that
 f(x) = ∑ᵢ αᵢ × (βᵢ)ˣ, for 1 ≤ x ≤ N.
+The sampling step is set via `alg.stepsize` (default 1; `nothing` selects it automatically).
 """
-exponential_expansion(f::Vector{<:Number}; alg::ExponentialExpansionAlgorithm=OverDeterminedProny(),
-                      stepsize::Int=1) = exponential_expansion(f, alg; stepsize=stepsize)
+exponential_expansion(f::Vector{<:Number}; alg::ExponentialExpansionAlgorithm=OverDeterminedProny()) =
+    exponential_expansion(f, alg)
 """
-    exponential_expansion(f, L::Int, alg; stepsize=1)
+    exponential_expansion(f, L::Int, alg)
 
 Sample the function `f` on `1:L` first, then perform the exponential expansion.
 """
-exponential_expansion(f, L::Int, alg::ExponentialExpansionAlgorithm; stepsize::Int=1) =
-    exponential_expansion([f(k) for k in 1:L], alg; stepsize=stepsize)
-exponential_expansion(f, L::Int; alg::ExponentialExpansionAlgorithm=OverDeterminedProny(),
-                      stepsize::Int=1) = exponential_expansion(f, L, alg; stepsize=stepsize)
-
-"""
-    exponential_expansion_opt(f, L::Int, alg)
-
-Sample the function `f` on `1:L` first, then perform [`exponential_expansion_opt`](@ref).
-"""
-exponential_expansion_opt(f, L::Int, alg::ExponentialExpansionAlgorithm) =
-    exponential_expansion_opt([f(k) for k in 1:L], alg)
+exponential_expansion(f, L::Int, alg::ExponentialExpansionAlgorithm) =
+    exponential_expansion([f(k) for k in 1:L], alg)
+exponential_expansion(f, L::Int; alg::ExponentialExpansionAlgorithm=OverDeterminedProny()) =
+    exponential_expansion(f, L, alg)

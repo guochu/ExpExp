@@ -8,33 +8,36 @@
 #      so the unknowns are real, then refining them with a damped
 #      Gauss-Newton (Levenberg-Marquardt) solve using the analytic Jacobian.
 #
-# This algorithm sits on the same footing as `OverDeterminedProny` / `MatrixPencil`:
-# the sampling step is supplied via the `stepsize` keyword of
-# [`exponential_expansion`](@ref), or chosen automatically by
-# [`exponential_expansion_opt`](@ref).
+# This algorithm sits on the same footing as `OverDeterminedProny` / `MatrixPencil`;
+# the sampling step is carried by the `stepsize` field (default 1, or `nothing` for
+# automatic selection inside [`exponential_expansion`](@ref)).
 
 """
-    LeastSquareProny(n=10, tol=1e-8, verbosity=1)
-    LeastSquareProny(; n=10, tol=1e-8, verbosity=1)
+    LeastSquareProny(n=10, tol=1e-8, verbosity=1, stepsize=1)
+    LeastSquareProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Parameters for the least-squares Prony + gradient-descent expansion algorithm, defined
-only for complex-valued sequences. It first obtains a least-squares Prony guess and then
-refines it by damped Gauss-Newton over the real `(norm, phase)` parameterization.
+for both real- and complex-valued sequences (real data is upcast internally). It first
+obtains a least-squares Prony guess and then refines it by damped Gauss-Newton over the
+real `(norm, phase)` parameterization.
 `n` is the maximum number of terms, `tol` the convergence error and `verbosity` controls
-the output verbosity.
+the output verbosity. `stepsize` (default 1) is the uniform sampling step used by
+[`exponential_expansion`](@ref); pass `stepsize=nothing` to let the algorithm select the
+step automatically.
 """
 struct LeastSquareProny <: ExponentialExpansionAlgorithm
     n::Int
     tol::Float64
     verbosity::Int
+    stepsize::Union{Int, Nothing}
 end
 """
-    LeastSquareProny(; n=10, tol=1e-8, verbosity=1)
+    LeastSquareProny(; n=10, tol=1e-8, verbosity=1, stepsize=1)
 
 Keyword constructor for `LeastSquareProny`.
 """
-LeastSquareProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1) =
-    LeastSquareProny(n, convert(Float64, tol), verbosity)
+LeastSquareProny(; n::Int=10, tol::Real=1.0e-8, verbosity::Int=1, stepsize::Union{Int,Nothing}=1) =
+    LeastSquareProny(n, convert(Float64, tol), verbosity, stepsize)
 
 """
     leastsquare_prony(x::Vector{<:Number}, p::Int)

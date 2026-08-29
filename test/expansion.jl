@@ -25,7 +25,7 @@ end
     ydata = [0.5^k + 2 * 0.7^k for k in 1:20]
     stepsize = 3
     atol = 1.0e-8
-    xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol); stepsize=stepsize)
+    xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol, stepsize=stepsize))
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 

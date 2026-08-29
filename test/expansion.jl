@@ -29,6 +29,31 @@ end
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
+@testset "exponential_expansion: powerlaw and multi-exponential data" begin
+    atol = 1.0e-5
+    # power-law decay f(x) = 1.3 * x^α
+    for alpha in (-2.0, -2.5, -3.0)
+        ydata = [1.3 * x^alpha for x in 1:100]
+        for alg in (OverDeterminedProny(n=20, tol=atol), DeterminedProny(n=20, tol=atol))
+            xs, lambdas = exponential_expansion(ydata, alg)
+            @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
+        end
+    end
+    # sum of 4 real exponentials, long sequence
+    ydata = [1.3 * 0.7^x + 0.7 * 0.5^x - 1.1 * 0.8^x + 0.1 * 0.95^x for x in 1:500]
+    xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol))
+    @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
+    for stepsize in 2:6
+        xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, stepsize=stepsize, tol=atol))
+        @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
+    end
+    # sum of 4 complex exponentials
+    ydata = [(1.3+0.2im) * (0.7+0.3im)^x + (0.7+1.1im) * (0.5+0.1im)^x -
+             (1.1-0.3im) * (0.8-0.5im)^x + (0.1-0.2) * (0.95+0.2im)^x for x in 1:500]
+    xs, lambdas = exponential_expansion(ydata, OverDeterminedProny(n=20, tol=atol))
+    @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
+end
+
 @testset "expansion_error: concatenated form" begin
     ydata = [0.5^k for k in 1:10]
     err = expansion_error(ydata, vcat([1.0], [0.5]))

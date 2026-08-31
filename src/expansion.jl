@@ -2,10 +2,29 @@
 # Common interface for exponential expansion algorithms
 # =====================================================================
 
+"""
+    ExponentialExpansionAlgorithm
+
+Abstract type of all exponential-expansion algorithms. Every concrete algorithm
+provides its own single-order fit method `exponential_expansion_n(f, p, alg)`, which
+is consumed by the common iterative loop of [`exponential_expansion`](@ref).
+"""
 abstract type ExponentialExpansionAlgorithm end
+"""
+    AbstractPronyExpansion <: ExponentialExpansionAlgorithm
+
+Internal intermediate abstract type for the polynomial-type (Prony) algorithms.
+"""
 abstract type AbstractPronyExpansion <: ExponentialExpansionAlgorithm end
 
 # fallback: each concrete algorithm provides its own n-term fit method
+"""
+    exponential_expansion_n(f::Vector, p::Int, alg::ExponentialExpansionAlgorithm)
+
+Single-order fit interface: fit the sequence `f` to `p` exponentials with algorithm `alg`.
+Each concrete algorithm implements its own method, returning `(coeffs, bases)` with
+`f(k) ≈ Σᵢ coeffs[i] * bases[i]^k`. The fallback throws an `ArgumentError`.
+"""
 exponential_expansion_n(f::Vector, p::Int, alg::ExponentialExpansionAlgorithm) =
     throw(ArgumentError("exponential expansion not implemented for $(typeof(alg))"))
 
@@ -57,6 +76,12 @@ function _exponential_expansion_opt(f::Vector{<:Number}, alg::ExponentialExpansi
     return cut(f, xs, lambdas, alg.tol * norm(f))
 end
 
+"""
+    expansion_changestepsize!(xs::Vector, lambdas::Vector, stepsize::Int)
+
+Rescale a fit obtained on a subsample with step `stepsize` back to the original sampling,
+in place: `xs[i] *= λ[i]^(1-1/s)` and `λ[i] = λ[i]^(1/s)`.
+"""
 function expansion_changestepsize!(xs::Vector, lambdas::Vector, stepsize::Int)
     α = 1.0/stepsize
     for i in 1:length(lambdas)
@@ -126,6 +151,12 @@ expansion_error(f::Vector{<:Number}, coeffs::Vector{<:Number}, alphas::Vector{<:
 # ----------------------------------------------------------------------
 # helpers for automatic step selection (triggered by `alg.stepsize === nothing`)
 # ----------------------------------------------------------------------
+"""
+    first_period(x::Vector{<:Real})
+
+Estimate the first oscillation period of the sequence `x` as the index of its first
+local extremum; used to derive candidate sampling steps for automatic step selection.
+"""
 function first_period(x::Vector{<:Real})
     idx = findfirst(i -> !((x[i] > x[i-1]) ⊻ (x[i] > x[i+1])), 2:(length(x) - 1))
     return isnothing(idx) ? length(x) : idx + 1

@@ -43,6 +43,14 @@ The sampling step is carried by the `alg.stepsize` field:
 """
 function exponential_expansion(f::Vector{<:Number}, alg::ExponentialExpansionAlgorithm)
     (length(f) > 1) || throw(ArgumentError("length of data should be larger than 1"))
+    if iszero(f)
+        # Degenerate input: an identically-zero sequence has no exponential content,
+        # and the Hankel/SVD based fits break down on it (matrix pencil returns NaN
+        # coefficients, least-squares/determined Prony throw). Return the single
+        # trivial zero term, which is what `OverDeterminedProny` produced anyway.
+        T = promote_type(eltype(f), Float64)
+        return T[zero(T)], T[zero(T)]
+    end
     if alg.stepsize isa Nothing
         return _exponential_expansion_opt(f, alg)
     end
@@ -73,6 +81,8 @@ function _exponential_expansion_opt(f::Vector{<:Number}, alg::ExponentialExpansi
         end
     end
     _, xs, lambdas = best
+    isnothing(xs) && throw(ArgumentError("exponential_expansion: no candidate sampling step " *
+        "produced a finite reconstruction error (data may contain NaN/Inf)"))
     return cut(f, xs, lambdas, alg.tol * norm(f))
 end
 

@@ -29,6 +29,17 @@ end
     @test expansion_error(ydata, xs, lambdas) / norm(ydata) < atol
 end
 
+@testset "exponential_expansion: identically-zero data" begin
+    # degenerate input: the Hankel/SVD based fits break down on it, every algorithm
+    # must return the single trivial zero term instead of NaN coefficients or a throw
+    for alg in (OverDeterminedProny(n=20, tol=1.0e-10), DeterminedProny(n=20, tol=1.0e-10),
+                MatrixPencil(n=20, tol=1.0e-10), LeastSquareProny(n=20, tol=1.0e-10),
+                MatrixPencil(n=20, tol=1.0e-10, stepsize=nothing))
+        xs, lambdas = exponential_expansion(zeros(20), alg)
+        @test length(xs) == 1 && iszero(xs[1]) && iszero(lambdas[1])
+    end
+end
+
 @testset "exponential_expansion: powerlaw and multi-exponential data" begin
     atol = 1.0e-5
     # power-law decay f(x) = 1.3 * x^α

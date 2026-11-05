@@ -2,7 +2,6 @@ module ExpExp
 
 using LinearAlgebra
 using Polynomials: Polynomial, roots
-using Logging: @warn
 
 export ExponentialExpansionAlgorithm, OverDeterminedProny, DeterminedProny, MatrixPencil, LeastSquareProny
 export exponential_expansion, expansion_error

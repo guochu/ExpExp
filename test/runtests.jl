@@ -19,4 +19,5 @@ real_exp_data() = [
     include("prony.jl")
     include("matrixpencil.jl")
     include("lsqexpansion.jl")
+    include("anchoredpencil.jl")
 end

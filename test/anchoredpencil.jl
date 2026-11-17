@@ -22,7 +22,6 @@ exp_signal(qs, coeffs, L) = ComplexF64[sum(coeffs[i] * qs[i]^k for i in eachinde
     @test alg.tol == 1e-10
     @test alg.verbosity == 1
     @test alg.pencil_rows == 128
-    @test alg.rightanchors == true
     @test alg.stepsize == 1
 end
 
@@ -100,14 +99,19 @@ end
     end
 end
 
-@testset "anchored_matrix_pencil: rightanchors=false projection" begin
+@testset "supercritical poles are always folded, never projected" begin
+    # the only handling of |q| > 1 is the exact :right fold — no silent
+    # projection onto the unit circle exists in this algorithm
     L = 40
     qs = [1.2, 0.6]
     coeffs = [0.3 - 0.7im, 1.5 + 0.2im]
     y = exp_signal(qs, coeffs, L)
-    xs, lambdas, anchors = anchored_matrix_pencil(y, 2; rightanchors=false)
-    @test all(a === :left for a in anchors)          # projection branch: no right anchors
-    @test all(abs.(lambdas) .<= 1 + 1e-12)           # supercritical poles projected to |q| = 1
+    xs, lambdas, anchors = anchored_matrix_pencil(y, 2)
+    @test count(a === :right for a in anchors) == 1   # eigvals order is not deterministic
+    @test count(a === :left for a in anchors) == 1
+    @test all(abs.(lambdas) .<= 1)
+    @test anchored_eval(xs, lambdas, anchors, L) ≈ y atol = 1e-8 * norm(y)
+    @test sort(anchored_poles(lambdas, anchors), by=abs) ≈ sort(qs, by=abs) rtol = 1e-6 atol = 1e-8
 end
 
 @testset "anchored triple <-> flattened round-trip" begin

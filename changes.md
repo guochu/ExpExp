@@ -68,17 +68,18 @@ ExponentialExpansionAlgorithm
 
 GTEMPO `fit_exponentials` 的领域扩展上收为 ExpExp 通用算法（见 `plan/expexp_anchored_pencil_plan.md`）：
 
-- `anchored_matrix_pencil(s, p; pencil_rows=128, rightanchors=true) -> (xs, lambdas, anchors)`
+- `anchored_matrix_pencil(s, p; pencil_rows=128) -> (xs, lambdas, anchors)`
   —— Hankel 行偏移均匀子采样至 `pencil_rows` 行（铅笔列空间 = 极点 Vandermonde 张成，行选择不变）
   + 双端锚定：返回三元组在拟合窗 `d = 1..L` 上满足 `:left` 项 `xs·λ^(d-1)`、`:right` 项 `xs·λ^(L-d)`，
-  全部 `|λ| ≤ 1`（`|q|>1` 极点折叠为右锚 `1/q`，恒等式 `q^(d-1) = q^(L-1)·(1/q)^(L-d)`，因子吸收进权重；
-  `rightanchors=false` 时投影到单位圆 `q/|q|`）。
-- `anchored_matrix_pencil_sweep(s; tol=1e-10, n=40, pencil_rows=128, rightanchors=true)
+  全部 `|λ| ≤ 1`（`|q|>1` 极点一律折叠为右锚 `1/q`，恒等式 `q^(d-1) = q^(L-1)·(1/q)^(L-d)`，因子吸收进权重）。
+  **无投影分支**：2026-11-17 裁决删除 `rightanchors` 输入（静默投影超临界极点被裁决为错误形态，
+  算法恒按双端锚定执行；GTEMPO 实轴调用点先行翻转）。
+- `anchored_matrix_pencil_sweep(s; tol=1e-10, n=40, pencil_rows=128)
   -> (xs, lambdas, anchors, err)` —— 一次 H0 SVD 复用的最小阶秩扫：首阶相对重建误差 `err ≤ tol`
   即返回；扫完不达抛 `ArgumentError`（带最优 err）。与逐调 `anchored_matrix_pencil` 逐位等价但只做一次 SVD，
   性能敏感消费走这层。
 - `AnchoredMatrixPencil <: ExponentialExpansionAlgorithm`，字段 `n / tol / verbosity / pencil_rows /
-  rightanchors / stepsize`，默认值 = GTEMPO 现设置（40 / 1e-10 / 1 / 128 / true / 1）。`exponential_expansion_n`
+  stepsize`，默认值 = GTEMPO 现设置（40 / 1e-10 / 1 / 128 / 1）。`exponential_expansion_n`
   经可逆展平返回包约定 `(xs, λ)`：右锚项 `xs·q^(L-k)` 映射为 `(xs·q^L, 1/q)`（`|λ|>1` ⟺ 右锚，node = `1/λ`），
   展平仅在拟合窗 `k = 1..L` 上值恒等；还原（消费端）：`:left` 权重乘 `λ`、`:right` 权重乘 `λ^L`。
 - 结构面走共享循环时每阶重做 Hankel SVD（纯、O(n) 倍代价，docstring 已注明）；`anchored_matrix_pencil_sweep`

@@ -21,15 +21,14 @@ end
 # to (nodes, anchors) with all |node| ≤ 1, followed by a truncated-SVD
 # least-squares solve for the weights. Returns `(nodes, anchors, w, err)`, or
 # `nothing` if the pencil eigenvalues are nonfinite at this rank.
-function _anchored_pencil_rank(U, S, Vh, H1, y::Vector{ComplexF64}, r::Int, rightanchors::Bool)
+function _anchored_pencil_rank(U, S, Vh, H1, y::Vector{ComplexF64}, r::Int)
     L = length(y)
     A = (U[:, 1:r]' * H1 * Vh[1:r, :]') * Diagonal(1 ./ S[1:r])
     nodes = ComplexF64.(eigvals(A))
     all(isfinite, nodes) || return nothing
-    # without anchoring, out-of-disc poles are projected onto the unit circle;
-    # with two-end anchoring they are folded to :right anchors with node 1/q.
-    nodes = [!rightanchors && abs(q) > 1 ? q / abs(q) : q for q in nodes]
-    anchors = [rightanchors && abs(q) > 1 ? :right : :left for q in nodes]
+    # poles with |q| > 1 are folded to :right anchors with node 1/q: the exact
+    # identity q^(d-1) = q^(L-1) * (1/q)^(L-d) with the factor absorbed in xs.
+    anchors = [abs(q) > 1 ? :right : :left for q in nodes]
     nodes = [a == :right ? inv(q) : q for (a, q) in zip(anchors, nodes)]
     B = ComplexF64[q^(a == :left ? d - 1 : L - d) for d in 1:L, (q, a) in zip(nodes, anchors)]
     F = svd(B)
@@ -41,7 +40,7 @@ function _anchored_pencil_rank(U, S, Vh, H1, y::Vector{ComplexF64}, r::Int, righ
 end
 
 """
-    anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows=128, rightanchors=true)
+    anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows=128)
         -> (xs, lambdas, anchors)
 
 Hua–Sarkar matrix pencil fit of the data sequence `s` to `p` exponentials with
@@ -55,16 +54,14 @@ s(d) ≈ Σᵢ xs[i] * lambdas[i]^(L - d)   if anchors[i] == :right
 ```
 
 on the sampling window `d = 1,...,L = length(s)`, with all `|lambdas[i]| ≤ 1`:
-poles `q` with `|q| > 1` are folded to `:right` anchors with node `1/q`, which
-is the exact identity `q^(d-1) = q^(L-1) * (1/q)^(L-d)` with the factor absorbed
-in `xs`. With `rightanchors=false` such poles are projected onto the unit circle
-(`q/|q|`) instead and all anchors are `:left`.
+poles `q` with `|q| > 1` are always folded to `:right` anchors with node `1/q`,
+the exact identity `q^(d-1) = q^(L-1) * (1/q)^(L-d)` with the factor absorbed
+in `xs` — no silent approximation of supercritical poles takes place.
 
 Throws an `ArgumentError` if the pencil is rank deficient or produces nonfinite
 eigenvalues at the requested order.
 """
-function anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows::Int=128,
-                                rightanchors::Bool=true)
+function anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows::Int=128)
     pencil_rows >= 1 || throw(ArgumentError("pencil_rows must be >= 1"))
     p >= 1 || throw(ArgumentError("p must be >= 1"))
     y = ComplexF64.(s)
@@ -73,15 +70,15 @@ function anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows::Int=12
     U, S, Vh, H1 = _anchored_pencil_init(y, pencil_rows)
     r = min(p, length(S))
     S[r] > 0 || throw(ArgumentError("matrix pencil rank deficient at order $p"))
-    res = _anchored_pencil_rank(U, S, Vh, H1, y, r, rightanchors)
+    res = _anchored_pencil_rank(U, S, Vh, H1, y, r)
     res === nothing && throw(ArgumentError("matrix pencil produced nonfinite eigenvalues at order $p"))
     nodes, anchors, w = res
     return w, nodes, anchors
 end
 
 """
-    anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol=1e-10, n=40, pencil_rows=128,
-                                 rightanchors=true) -> (xs, lambdas, anchors, err)
+    anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol=1e-10, n=40, pencil_rows=128)
+        -> (xs, lambdas, anchors, err)
 
 Minimal-order sweep over the anchored matrix pencil: the rank-`r` fit of
 [`anchored_matrix_pencil`](@ref) is evaluated for `r = 1,...,n` reusing a single
@@ -96,7 +93,7 @@ SVD cost; performance-sensitive consumers should prefer this function over the
 Hankel matrix at every order through the shared expansion loop).
 """
 function anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol::Real=1.0e-10, n::Int=40,
-                                      pencil_rows::Int=128, rightanchors::Bool=true)
+                                      pencil_rows::Int=128)
     0 < tol < 1 && n >= 1 && pencil_rows >= 1 || throw(ArgumentError("invalid fit settings"))
     y = ComplexF64.(s)
     all(isfinite, y) || throw(ArgumentError("nonfinite fit samples"))
@@ -105,7 +102,7 @@ function anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol::Real=1.0e-10, n:
     best = Inf
     for r in 1:min(n, length(S))
         S[r] > 0 || break
-        res = _anchored_pencil_rank(U, S, Vh, H1, y, r, rightanchors)
+        res = _anchored_pencil_rank(U, S, Vh, H1, y, r)
         res === nothing && continue
         nodes, anchors, w, err = res
         best = min(best, err)
@@ -115,15 +112,16 @@ function anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol::Real=1.0e-10, n:
 end
 
 """
-    AnchoredMatrixPencil(; n=40, tol=1e-10, verbosity=1, pencil_rows=128, rightanchors=true,
-                         stepsize=1)
+    AnchoredMatrixPencil(; n=40, tol=1e-10, verbosity=1, pencil_rows=128, stepsize=1)
 
 Parameters for the anchored matrix pencil expansion algorithm: the
 [`MatrixPencil`](@ref) method augmented with uniform Hankel row subsampling to
 `pencil_rows` rows and two-end anchoring, exposing the fit as an
 [`ExponentialExpansionAlgorithm`](@ref) with the common `(xs, lambdas)` return
 convention. The default parameter values match the influence-function fit of
-GTEMPO (`maxterms=40`, `rtol=1e-10`, `pencil_rows=128`, `rightanchors=true`).
+GTEMPO (`maxterms=40`, `rtol=1e-10`, `pencil_rows=128`). Supercritical poles
+are always folded to `:right` anchors (exact on the fitted window); the fit
+never silently approximates them.
 
 !!! note
     The shared expansion loop refits (and re-`svd`s) the Hankel matrix at every
@@ -135,18 +133,16 @@ struct AnchoredMatrixPencil <: ExponentialExpansionAlgorithm
     tol::Float64
     verbosity::Int
     pencil_rows::Int
-    rightanchors::Bool
     stepsize::Union{Int, Nothing}
 end
 """
-    AnchoredMatrixPencil(; n=40, tol=1e-10, verbosity=1, pencil_rows=128, rightanchors=true,
-                         stepsize=1)
+    AnchoredMatrixPencil(; n=40, tol=1e-10, verbosity=1, pencil_rows=128, stepsize=1)
 
 Keyword constructor for `AnchoredMatrixPencil`.
 """
 AnchoredMatrixPencil(; n::Int=40, tol::Real=1.0e-10, verbosity::Int=1, pencil_rows::Int=128,
-                     rightanchors::Bool=true, stepsize::Union{Int,Nothing}=1) =
-    AnchoredMatrixPencil(n, convert(Float64, tol), verbosity, pencil_rows, rightanchors, stepsize)
+                     stepsize::Union{Int,Nothing}=1) =
+    AnchoredMatrixPencil(n, convert(Float64, tol), verbosity, pencil_rows, stepsize)
 
 # Flatten the anchored triple to the package convention `f(k) = Σᵢ xs[i]*λ[i]^k`:
 # a `:left` term `xs*q^(k-1)` maps to `(xs/q, q)` and a `:right` term `xs*q^(L-k)`
@@ -171,7 +167,6 @@ end
 
 function exponential_expansion_n(f::Vector, p::Int, alg::AnchoredMatrixPencil)
     L = length(f)
-    xs, lambdas, anchors = anchored_matrix_pencil(f, p; pencil_rows=alg.pencil_rows,
-                                                  rightanchors=alg.rightanchors)
+    xs, lambdas, anchors = anchored_matrix_pencil(f, p; pencil_rows=alg.pencil_rows)
     return _anchored_pencil_flatten(xs, lambdas, anchors, L)
 end

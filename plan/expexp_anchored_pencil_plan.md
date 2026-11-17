@@ -8,6 +8,7 @@
 
 - 把 GTEMPO `fit_exponentials` 的三件领域扩展（双端锚定 `rightanchors`、行子采样 `pencil_rows`、rtol 秩扫描）实现为 **ExpExp 新算法 `AnchoredMatrixPencil`**，GTEMPO 改为委托调用。
 - **默认参数与 GTEMPO 现设置一致**：`tol=1e-10`（=rtol）、`n=40`（=maxterms）、`pencil_rows=128`、`rightanchors=true`、`stepsize=1`。
+- **【2026-11-17 追加裁决：`rightanchors` 输入整体删除】**——算法恒按双端锚定（=原 `rightanchors=true`）执行：`|q|>1` 极点一律经恒等式 `q^(d-1) = q^(L-1)·(1/q)^(L-d)` 精确折叠为 `:right` 锚；投影分支（`q/|q|` 压单位圆）**不实现**。理由：投影对超临界极点是有损静默变换（窗内拟合达标、窗外语义错误），GTEMPO 实轴调用点已先行删除 `rightanchors=false`（influence.jl real_factors，守卫 "growing real pole unsupported" 随之激活，见 §6 追记）；GTEMPO 薄壳接入时其自身 `fit_exponentials` 的 `rightanchors` kwarg 一并删除（现调用面已无 false 调用方）。
 
 ## 1. 探查定谳（计划赖以成立的关键事实）
 
@@ -32,7 +33,7 @@
 ```julia
 # 1) 独立核心（锚定三元组一等公民；GTEMPO 位精确消费走这层）
 """
-    anchored_matrix_pencil(s, p; pencil_rows=128, rightanchors=true)
+    anchored_matrix_pencil(s, p; pencil_rows=128)
         -> (xs, lambdas, anchors)
 
 Hua–Sarkar 铅笔的行子采样 + 双端锚定变体：Hankel 行偏移均匀子采样至
@@ -40,11 +41,11 @@ Hua–Sarkar 铅笔的行子采样 + 双端锚定变体：Hankel 行偏移均匀
 折叠为右锚 `1/q`（恒等变换 q^(d−1) = q^(L−1)·(1/q)^(L−d)，权重吸收常数），
 返回 (xs, lambdas, anchors)——anchors[i] ∈ {:left, :right}，lambdas 全部 |·|≤1。
 """
-function anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows::Int=128, rightanchors::Bool=true)
+function anchored_matrix_pencil(s::Vector{<:Number}, p::Int; pencil_rows::Int=128)
 
 # 2) 秩扫（GTEMPO 现状语义：一次 SVD + 逐秩投影 + 相对误差早退）
 """
-    anchored_matrix_pencil_sweep(s; tol=1e-10, n=40, pencil_rows=128, rightanchors=true)
+    anchored_matrix_pencil_sweep(s; tol=1e-10, n=40, pencil_rows=128)
         -> (xs, lambdas, anchors, err)
 
 一次 H0 SVD 复用的最小阶扫描：首阶相对重建误差 ≤ tol 即返回；扫完不达抛
@@ -52,38 +53,38 @@ ArgumentError（带最优 err）。等价于对 p=1..n 逐调 anchored_matrix_pe
 但只做一次 SVD。
 """
 function anchored_matrix_pencil_sweep(s::Vector{<:Number}; tol::Real=1.0e-10, n::Int=40,
-                                      pencil_rows::Int=128, rightanchors::Bool=true)
+                                      pencil_rows::Int=128)
 
 # 3) 算法结构（约定面；默认参数 = GTEMPO 现设置）
 struct AnchoredMatrixPencil <: ExponentialExpansionAlgorithm
     n::Int                # 40   = GTEMPO maxterms
     tol::Float64          # 1e-10 = GTEMPO rtol
+    verbosity::Int        # 1（共享循环硬要求，§6 批注）
     pencil_rows::Int      # 128
-    rightanchors::Bool    # true
     stepsize::Union{Int,Nothing}   # 1
 end
-AnchoredMatrixPencil(; n::Int=40, tol::Real=1.0e-10, pencil_rows::Int=128,
-                     rightanchors::Bool=true, stepsize::Union{Int,Nothing}=1) = ...
+AnchoredMatrixPencil(; n::Int=40, tol::Real=1.0e-10, verbosity::Int=1, pencil_rows::Int=128,
+                     stepsize::Union{Int,Nothing}=1) = ...
 exponential_expansion_n(f::Vector, p::Int, alg::AnchoredMatrixPencil) =
-    展平(anchored_matrix_pencil(f, p; pencil_rows=alg.pencil_rows, rightanchors=alg.rightanchors))
+    展平(anchored_matrix_pencil(f, p; pencil_rows=alg.pencil_rows))
     # 右锚项展平：λ=1/q、xs 吸收常数（F3 双射；值恒等）
 ```
 
 - export `AnchoredMatrixPencil, anchored_matrix_pencil, anchored_matrix_pencil_sweep`。
 - 性能裁定：**GTEMPO 走 `anchored_matrix_pencil_sweep`（F4-n2 语义）**；`AnchoredMatrixPencil` 结构面供一般 ExpExp 用户走共享循环（纯、每阶重做 SVD），docstring 注明该代价。
-- 投影分支（实轴用，`rightanchors=false` 时 |q|>1 → q/|q|）同属核心参数，行为原样移植。
+- 双端锚定恒开、无投影分支（2026-11-17 追加裁决，§0/§6）：不提供 `rightanchors` 输入。
 
 ### 2.2 GTEMPO 侧：`fit_exponentials` 变薄壳
 
 ```julia
-function fit_exponentials(y; rtol=1e-10, maxterms=40, pencil_rows=128, rightanchors::Bool=true)
+function fit_exponentials(y; rtol=1e-10, maxterms=40, pencil_rows=128)   # 2026-11-17: rightanchors kwarg 删除
     边界（isfinite、L==0/1）原样 →
     (L == 0 || all(iszero, y)) && return (…零因子…)   # 与 ExpExp iszero 语义对齐，保留本地早退
     if L <= maxterms   # 退化窗回退：IF 域策略，留 GTEMPO（F6）
         …单位根插值原样…
     end
     (xs, lambdas, anchors, err) = ExpExp.anchored_matrix_pencil_sweep(y; tol=rtol, n=maxterms,
-                                                                      pencil_rows, rightanchors)
+                                                                      pencil_rows)
     return (; weights=xs, nodes=lambdas, anchors, relative_error=err)
 end
 ```
@@ -103,7 +104,7 @@ end
    - 解析指数和精确重建（衰减项、双侧窗、复相位极点）；
    - 行子采样 vs 满行：极点一致性（干净数据）；
    - 折叠恒等 round-trip：锚定三元组 vs 展平 (xs, λ) 在窗口上函数值逐位/容差一致；
-   - sweep 最小阶语义（rtol 合同）、`rightanchors=false` 投影行为、默认参数值断言（40/1e-10/128/true）；
+   - sweep 最小阶语义（rtol 合同）、默认参数值断言（40/1e-10/128）；~~`rightanchors=false` 投影行为~~（2026-11-17 随输入删除移除）；
    - ExpExp 原有 53 项全绿。
 2. **GTEMPO**：全测试绿；ExactTTI ≡ PartialIF 对拍与 ED 锚维持（位精确线：逐位不变；漂移线：新基线）。
 3. 快线/慢线按 §2.3 步骤 0 结果走。
@@ -113,6 +114,7 @@ end
 - 不改 ExpExp 返回约定（锚定不进共享接口，双射可逆 F3）；
 - 不把退化窗回退上收 ExpExp（IF 域策略）；
 - 不动 `stepsize=nothing` 级联路径（GTEMPO 恒 stepsize=1）；
+- **不实现投影分支、不提供 `rightanchors` 输入**（2026-11-17 追加裁决，§0）；
 - BCS/其它调用方零改动。
 
 ## 5. 工作量与顺序
@@ -138,3 +140,13 @@ end
   → **GTEMPO 接入时 ExactTTI golden 批次重锚**（六基准新基线，物理量仅 ~1e-15 量级移动），验收获收走 §3-慢线。
 - GTEMPO 薄壳（§2.2）未动：独立一步，`fit_exponentials` 委托 `anchored_matrix_pencil_sweep`、
   Project.toml 加 ExpExp 依赖、退化窗回退留 wrapper。
+- **投影分支裁决（2026-11-17 追记）**：用户裁决 `rightanchors=false` 的静默投影是错误形态——
+  GTEMPO 实轴调用点（influence.jl real_factors）**删除 `rightanchors=false` 改用默认 true**：
+  超临界极点精确折叠为 `:right`，由既有守卫 "growing real pole unsupported; use PartialIF"
+  响抛（该守卫此前被投影架空为死代码）；健康核（极点全 ≤1）折叠惰性、结果逐位不变，
+  greater/lesser golden 机器精度锚 10 项实测绿。
+- **【2026-11-17 终局裁决：`rightanchors` 输入自 ExpExp 整体删除】**（推翻上一条"保留为通用 API"的
+  中间态）——`anchored_matrix_pencil` / `anchored_matrix_pencil_sweep` / `AnchoredMatrixPencil`
+  均不再接受 `rightanchors`，行为恒为双端锚定折叠；投影分支自源码删除。用户随后指示实施。
+  顺带修复：GTEMPO Project.toml 缺 `[extras]` 段（Random/Test/Printf），本机 registry 快照缺 Printf
+  条目故 Pkg.test 沙箱不可用，测试走 `julia --project=. test/runtests.jl` 直跑惯例。
